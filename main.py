@@ -1,7 +1,7 @@
 from z3 import *
 
 
-class mersenne_rng(object):
+class MT19937(object):
     def __init__(self, seed=5489):
         self.state = [0] * 624
         self.f = 1812433253
@@ -77,20 +77,42 @@ class PRNGCracker:
         y = y ^ (y >> self.l)
         return y
 
-    def untemper(self, out):
-        y1 = BitVec("y1", self.w)
-        y2 = BitVec("y2", self.w)
-        y3 = BitVec("y3", self.w)
-        y4 = BitVec("y4", self.w)
-        y = BitVecVal(out, self.w)
-        s = Solver()
-        s.add(y2 == y1 ^ LShR(y1, self.u))
-        s.add(y3 == y2 ^ ((y2 << self.s) & self.b))
-        s.add(y4 == y4 ^ ((y3 << self.t) & self.c))
-        s.add(y == y4 ^ LShR(y4, self.l))
-        s.check()
+    def untemper(self, y):
+        y = self.undoTemperShiftL(y)
+        y = self.undoTemperShiftT(y)
+        y = self.undoTemperShiftS(y)
+        y = self.undoTemperShiftU(y)
+        return y
 
-        return s.model()[y1].as_long()
+    def undoTemperShiftL(self, y):
+        last14 = y >> 18
+        final = y ^ last14
+        return final
+
+    def undoTemperShiftT(self, y):
+        first17 = y << 15
+        final = y ^ (first17 & self.c)
+        return final
+
+    def undoTemperShiftS(self, y):
+        a = y << 7
+        b = y ^ (a & self.b)
+        c = b << 7
+        d = y ^ (c & self.b)
+        e = d << 7
+        f = y ^ (e & self.b)
+        g = f << 7
+        h = y ^ (g & self.b)
+        i = h << 7
+        final = y ^ (i & self.b)
+        return final
+
+    def undoTemperShiftU(self, y):
+        a = y >> 11
+        b = y ^ a
+        c = b >> 11
+        final = y ^ c
+        return final
 
     def crack(self, numbers):
         bitvecs = []
