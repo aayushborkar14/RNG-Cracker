@@ -26,12 +26,13 @@ class RNGCracker:
             s = s.rstrip("x")
         return s, flag
 
-    def crack(self, numbers) -> list[int]:
+    def bits_needed(self, n):
+        return 624 * 32 - len(self.solver.equations)
+
+    def add_numbers(self, numbers):
         outputs = []
         equations = []
         for num in numbers:
-            if len(num) != 32:
-                raise ValueError("Invalid number length")
             s, flag = self._process_string(num)
             if not flag:
                 raise ValueError("Non-trailing x found")
@@ -42,14 +43,18 @@ class RNGCracker:
                 self.solver.insert(
                     equations[i][j], (outputs[i] >> (len(numbers[i]) - 1 - j)) & 1
                 )
-        return self.solver.solve()
+
+    def crack(self):
+        return (3, tuple(self.solver.solve() + [0]), None)
 
 
 test_numbers = [bin(random.getrandbits(32))[2:].rjust(32, "0") for _ in range(624)]
 rng_cracker = RNGCracker()
 try:
-    recovered_state = rng_cracker.crack(test_numbers)
-    random.setstate((3, tuple(recovered_state + [0]), None))
+    rng_cracker.add_numbers(test_numbers)
+    print(f"Additional bits needed: {rng_cracker.bits_needed(624)}")
+    recovered_state = rng_cracker.crack()
+    random.setstate(recovered_state)
     for i in range(624):
         assert int(test_numbers[i], 2) == random.getrandbits(32)
     print("Cracked successfully!")
