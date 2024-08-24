@@ -22,20 +22,14 @@ class Solver:
         self.equations.append(equation)
         self.outputs.append(output)
 
-    def is_solvable(self):
-        return len(self.equations) == 624 * 32
-
     def solve(self):
-        if not self.is_solvable():
-            assert False, "Not solvable"
-
         num = 0
         for i, eq in enumerate(self.equations):
-            assert eq == (eq & -eq), "Should be reduced now"
             if self.outputs[i]:
-                num |= eq
+                # Assume every free variable is 0
+                num |= eq & -eq
 
-        state = [(num >> (32 * i)) & 0xFFFFFFFF for i in range(624)][::-1]
+        state = [(num >> (32 * i)) & 0xFFFFFFFF for i in range(624)]
         return state
 
 
